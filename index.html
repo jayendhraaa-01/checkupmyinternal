@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>check my internal mark | AI&DS/GCT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Direct Vector jsPDF Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #070913;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(0, 242, 254, 0.22);
+      --card-border-subtle: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --accent-purple: #7f00ff;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-sub: #64748b;
+      --error-red: #ff4757;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.12) 0%, transparent 40%),
+                  radial-gradient(circle at 85% 85%, rgba(127, 0, 255, 0.12) 0%, transparent 45%),
+                  radial-gradient(circle at 50% 50%, rgba(79, 172, 254, 0.06) 0%, transparent 60%),
+                  var(--bg);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      overflow-x: hidden;
+    }
+
+    /* Splash Screen */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: #070913;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+
+    #splash-screen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .loader-ring-wrapper {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .spinner-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      border-top-color: var(--accent-cyan);
+      border-right-color: var(--accent-blue);
+      animation: spin 1.2s linear infinite;
+    }
+
+    .spinner-ring-inner {
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-bottom-color: var(--accent-purple);
+      animation: spin-reverse 1s linear infinite;
+    }
+
+    .loader-core-icon {
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    .splash-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.35rem;
+    }
+
+    .splash-sub {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 1.75rem;
+    }
+
+    .thunder-beam-container {
+      position: relative;
+      width: 250px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 242, 254, 0.25);
+    }
+
+    .thunder-beam-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan), var(--accent-purple));
+      border-radius: 99px;
+      transition: width 0.1s ease-out;
+      box-shadow: 0 0 14px rgba(0, 242, 254, 0.7);
+    }
+
+    .progress-percent-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Overall Layout */
+    .page-layout {
+      width: 100%;
+      max-width: 1440px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .page-layout.ready {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      background: rgba(79, 172, 254, 0.1);
+      border: 1px solid rgba(79, 172, 254, 0.35);
+      color: var(--accent-cyan);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    h1 {
+      font-size: 2.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.35rem;
+      font-weight: 500;
+    }
+
+    /* 3-Column Layout: Left (Sticky) - Center (App) - Right (Sticky) */
+    .layout-columns {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 280px;
+      gap: 1.5rem;
+      align-items: start;
+      position: relative;
+    }
+
+    .main-content {
+      width: 100%;
+      min-width: 0;
+    }
+
+    /* Sticky Classification Cards */
+    .side-card {
+      position: -webkit-sticky;
+      position: sticky;
+      top: 1.5rem;
+      max-height: calc(100vh - 3rem);
+      overflow-y: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 18px;
+      backdrop-filter: blur(16px);
+      padding: 1.3rem;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      z-index: 10;
+    }
+
+    .side-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .distinction-card::before {
+      background: linear-gradient(90deg, transparent, #38ef7d, transparent);
+    }
+
+    .firstclass-card::before {
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+    }
+
+    .side-card-header {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.65rem;
+    }
+
+    .class-badge-pill {
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 99px;
+      display: inline-block;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .pill-distinction {
+      background: rgba(56, 239, 125, 0.12);
+      border: 1px solid rgba(56, 239, 125, 0.35);
+      color: #38ef7d;
+    }
+
+    .pill-first {
+      background: rgba(0, 242, 254, 0.12);
+      border: 1px solid rgba(0, 242, 254, 0.35);
+      color: var(--accent-cyan);
+    }
+
+    .side-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .side-card li {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+      margin-bottom: 0.55rem;
+      position: relative;
+      padding-left: 14px;
+    }
+
+    .side-card li:last-child {
+      margin-bottom: 0;
+    }
+
+    .distinction-card li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: #38ef7d;
+      font-weight: bold;
+    }
+
+    .firstclass-card li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+
+    /* Core Calculator Styles */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border-subtle);
+      border-radius: 20px;
+      backdrop-filter: blur(16px);
+      padding: 1.8rem;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-purple), transparent);
+    }
+
+    .selector-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      margin-bottom: 0.75rem;
+      color: #ffffff;
+    }
+
+    .student-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .subject-buttons-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .subj-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 0.75rem 0;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .subj-btn:hover {
+      background: rgba(79, 172, 254, 0.18);
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+    }
+
+    .subj-btn.active {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #070913;
+      border-color: transparent;
+      box-shadow: 0 0 14px rgba(0, 242, 254, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-submit-main {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      padding: 0.95rem;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 20px -5px rgba(79, 172, 254, 0.4);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn-submit-main:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 25px -5px rgba(79, 172, 254, 0.55);
+    }
+
+    #student-display-banner {
+      display: none;
+      background: rgba(0, 242, 254, 0.08);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      border-radius: 14px;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 1.5rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .student-meta-item {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .student-meta-item strong {
+      color: #ffffff;
+      font-size: 0.95rem;
+    }
+
+    .subject-slot {
+      background: rgba(14, 19, 32, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 18px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .subject-slot:hover {
+      border-color: rgba(0, 242, 254, 0.35);
+      box-shadow: 0 10px 30px -10px rgba(0, 242, 254, 0.2);
+    }
+
+    .slot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .slot-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .subj-name-wrap {
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .subj-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.4rem;
+    }
+
+    .req-star {
+      color: var(--error-red);
+      font-weight: 800;
+    }
+
+    .subj-name-input {
+      width: 100%;
+      background: rgba(7, 9, 19, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 0.75rem 0.9rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .subj-name-input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.15);
+    }
+
+    .subj-name-input.error {
+      border-color: var(--error-red) !important;
+      box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.3) !important;
+      animation: shake 0.35s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-5px); }
+      40%, 80% { transform: translateX(5px); }
+    }
+
+    .grid-inputs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .input-group label {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      background: rgba(7, 9, 19, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 0.75rem 2.4rem 0.75rem 0.75rem;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    .input-wrapper input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 2px rgba(0, 242, 254, 0.15);
+    }
+
+    .input-wrapper span {
+      position: absolute;
+      right: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #64748b;
+      pointer-events: none;
+    }
+
+    .slot-internal-banner {
+      background: rgba(0, 242, 254, 0.06);
+      border: 1px solid rgba(0, 242, 254, 0.22);
+      border-radius: 14px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .slot-internal-banner .banner-label {
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-cyan);
+    }
+
+    .slot-internal-banner .banner-score {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+    }
+
+    .prediction-spotlight {
+      background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(127, 0, 255, 0.1));
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      border-radius: 16px;
+      padding: 1.25rem;
+      text-align: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .pred-headline {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .pred-highlight-number {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #00f2fe;
+      line-height: 1.15;
+      margin-bottom: 0.35rem;
+    }
+
+    .conversion-pill-container {
+      display: flex;
+      justify-content: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin: 0.75rem 0;
+    }
+
+    .conversion-pill {
+      background: rgba(7, 9, 19, 0.85);
+      border: 1px solid rgba(0, 242, 254, 0.25);
+      padding: 5px 14px;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .conversion-pill strong {
+      color: var(--accent-cyan);
+    }
+
+    .pred-subtext {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    .chips-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.85rem;
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-main);
+    }
+
+    .chip:hover {
+      border-color: var(--accent-cyan);
+    }
+
+    .chip.active {
+      background: var(--accent-cyan);
+      color: #070913;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+    }
+
+    .slot-result-box {
+      background: rgba(7, 9, 19, 0.65);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .grade-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 0.35rem;
+      font-size: 0.85rem;
+    }
+
+    .grade-row {
+      background: rgba(18, 24, 38, 0.65);
+      border-radius: 8px;
+    }
+
+    .grade-row td {
+      padding: 0.6rem 0.9rem;
+    }
+
+    .grade-row td:first-child {
+      border-top-left-radius: 8px;
+      border-bottom-left-radius: 8px;
+    }
+
+    .grade-row td:last-child {
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+      text-align: right;
+    }
+
+    .grade-badge { font-weight: 800; }
+    .grade-o { color: #38ef7d; }
+    .grade-aplus { color: #00f2fe; }
+    .grade-a { color: #4facfe; }
+    .grade-bplus { color: #fbc531; }
+    .grade-b { color: #e1b12c; }
+    .grade-c { color: #fd9644; }
+    .grade-ra { color: #ff4757; }
+
+    .req-mark {
+      font-weight: 800;
+      color: #ffffff;
+    }
+
+    #export-card-wrapper {
+      display: none;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+
+    .btn-export-pdf {
+      background: linear-gradient(135deg, #00f2fe, #4facfe);
+      color: #070913;
+      border: none;
+      border-radius: 14px;
+      padding: 1.1rem 2.5rem;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 25px -5px rgba(0, 242, 254, 0.45);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-export-pdf:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px -5px rgba(0, 242, 254, 0.65);
+    }
+
+    .notice {
+      margin-top: 1.5rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-top: auto;
+      padding-top: 2rem;
+      line-height: 1.6;
+    }
+
+    footer .brand {
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    footer .creators {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    footer .creators strong {
+      color: #ffffff;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spin-reverse {
+      to { transform: rotate(-360deg); }
+    }
+
+    /* Responsive Breakdown */
+    @media (max-width: 1100px) {
+      .layout-columns {
+        grid-template-columns: 1fr;
+      }
+      .side-card {
+        position: static;
+        max-height: none;
+      }
+      .distinction-card {
+        order: -2;
+      }
+      .firstclass-card {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 650px) {
+      .student-info-grid {
+        grid-template-columns: 1fr;
+      }
+      .grid-inputs {
+        grid-template-columns: 1fr 1fr;
+      }
+      .subject-buttons-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Splash Screen -->
+  <div id="splash-screen">
+    <div class="loader-ring-wrapper">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring-inner"></div>
+      <span class="loader-core-icon">⚡</span>
+    </div>
+    <div class="splash-title">check my internal mark</div>
+    <div class="splash-sub">Associated by Dept of AI&DS/GCT</div>
+    <div class="thunder-beam-container">
+      <div class="thunder-beam-fill" id="splash-progress"></div>
+    </div>
+    <div class="progress-percent-label" id="splash-percent">Initializing Assets...</div>
+  </div>
+
+  <div class="page-layout" id="app-container">
+    <header>
+      <div class="badge">⚡ Associated by Dept of AI&DS/GCT</div>
+      <h1>check my internal mark</h1>
+      <p class="subtitle">Semester Exam Score Predictor & Whole-Mark Converter</p>
+    </header>
+
+    <div class="layout-columns">
+      
+      <!-- LEFT SIDE: First Class with Distinction (Sticky on scroll) -->
+      <aside class="side-card distinction-card">
+        <div class="side-card-header">
+          🎓 Classification
+        </div>
+        <span class="class-badge-pill pill-distinction">First Class with Distinction</span>
+        <ul>
+          <li>Pass all courses in all 8 semesters</li>
+          <li>Complete within the prescribed duration</li>
+          <li><strong>CGPA ≥ 8.50</strong></li>
+        </ul>
+      </aside>
+
+      <!-- CENTER: Main Application Core -->
+      <main class="main-content">
+        <div class="card">
+          <div class="student-info-grid">
+            <div class="input-group">
+              <label for="student-name">Student Name</label>
+              <div class="input-wrapper">
+                <input type="text" id="student-name" placeholder="e.g. Arun Kumar" />
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="student-regno">Register Number</label>
+              <div class="input-wrapper">
+                <input type="text" id="student-regno" placeholder="e.g. 23AD055" />
+              </div>
+            </div>
+          </div>
+
+          <div class="selector-title">Select Number of Subjects (1 to 8)</div>
+          <div class="subject-buttons-grid">
+            <button class="subj-btn" onclick="selectSubjectCount(1, this)">1</button>
+            <button class="subj-btn" onclick="selectSubjectCount(2, this)">2</button>
+            <button class="subj-btn" onclick="selectSubjectCount(3, this)">3</button>
+            <button class="subj-btn" onclick="selectSubjectCount(4, this)">4</button>
+            <button class="subj-btn" onclick="selectSubjectCount(5, this)">5</button>
+            <button class="subj-btn" onclick="selectSubjectCount(6, this)">6</button>
+            <button class="subj-btn" onclick="selectSubjectCount(7, this)">7</button>
+            <button class="subj-btn" onclick="selectSubjectCount(8, this)">8</button>
+          </div>
+
+          <button class="btn-submit-main" onclick="triggerCalculationWithLoading()">Continue to Subjects</button>
+        </div>
+
+        <div id="student-display-banner">
+          <div class="student-meta-item">Student: <strong id="disp-name">--</strong></div>
+          <div class="student-meta-item">Reg No: <strong id="disp-regno">--</strong></div>
+          <div class="student-meta-item">Subjects: <strong id="disp-count">0</strong></div>
+        </div>
+
+        <div id="slots-container"></div>
+
+        <div id="export-card-wrapper">
+          <button class="btn-export-pdf" id="pdf-export-btn" onclick="generateVectorPDF()">
+            📥 Download Detailed Student Report (PDF)
+          </button>
+        </div>
+
+        <p class="notice">
+          * Minimum passing mark in the semester exam paper is strictly <strong>45 / 100</strong>.<br>
+          * If external mark is less than 45, result will be RA (Arrear) regardless of internal marks.
+        </p>
+      </main>
+
+      <!-- RIGHT SIDE: First Class (Sticky on scroll) -->
+      <aside class="side-card firstclass-card">
+        <div class="side-card-header">
+          🎓 Classification
+        </div>
+        <span class="class-badge-pill pill-first">First Class</span>
+        <ul>
+          <li>Pass all courses in all 8 semesters</li>
+          <li>Complete within the prescribed duration</li>
+          <li><strong>CGPA ≥ 6.50</strong></li>
+        </ul>
+      </aside>
+
+    </div>
+
+    <!-- Updated Footer Credits -->
+    <footer>
+      Crafted with precision by <span class="brand">Dept of AI&DS / GCT</span>
+      <div class="creators">
+        Designed & Developed by <strong>Jayendhraa A</strong> & <strong>Balaji G</strong> • B.Tech AI&DS
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const MIN_PASS_EXTERNAL = 45;
+    const subjectsState = {};
+    let selectedCount = 0;
+
+    function selectSubjectCount(count, btnElement) {
+      document.querySelectorAll('.subj-btn').forEach(b => b.classList.remove('active'));
+      btnElement.classList.add('active');
+      selectedCount = count;
+    }
+
+    function runThunderLoading(label, callback) {
+      const splashScreen = document.getElementById('splash-screen');
+      const progressBar = document.getElementById('splash-progress');
+      const progressText = document.getElementById('splash-percent');
+
+      progressBar.style.width = '0%';
+      progressText.innerText = label;
+      splashScreen.classList.remove('fade-out');
+
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.floor(Math.random() * 18) + 12;
+        if (progress > 100) progress = 100;
+
+        progressBar.style.width = `${progress}%`;
+        progressText.innerText = `${label} ${progress}%`;
+
+        if (progress === 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            splashScreen.classList.add('fade-out');
+            if (callback) callback();
+          }, 240);
+        }
+      }, 35);
+    }
+
+    function triggerCalculationWithLoading() {
+      const nameInput = document.getElementById('student-name').value.trim();
+      const regnoInput = document.getElementById('student-regno').value.trim();
+
+      if (!nameInput) {
+        alert("Please enter Student Name");
+        return;
+      }
+      if (!regnoInput) {
+        alert("Please enter Register Number");
+        return;
+      }
+      if (selectedCount === 0) {
+        alert("Please select the Number of Subjects (1 to 8)");
+        return;
+      }
+
+      runThunderLoading("Configuring Subject Slots...", () => {
+        openSlots();
+      });
+    }
+
+    function openSlots() {
+      const nameInput = document.getElementById('student-name').value.trim();
+      const regnoInput = document.getElementById('student-regno').value.trim();
+
+      document.getElementById('disp-name').innerText = nameInput;
+      document.getElementById('disp-regno').innerText = regnoInput.toUpperCase();
+      document.getElementById('disp-count').innerText = selectedCount;
+      document.getElementById('student-display-banner').style.display = 'flex';
+      document.getElementById('export-card-wrapper').style.display = 'block';
+
+      generateSlots(selectedCount);
+    }
+
+    function limitValue(input, maxVal, index) {
+      if (input.value === '') {
+        calcSubject(index);
+        return;
+      }
+      let val = parseFloat(input.value);
+      if (isNaN(val)) val = 0;
+      if (val > maxVal) val = maxVal;
+      if (val < 0) val = 0;
+      input.value = Math.round(val);
+      calcSubject(index);
+    }
+
+    function getSemMarks(target, internal) {
+      const rawNeeded = Math.ceil((target - internal) / 0.6);
+      return Math.max(MIN_PASS_EXTERNAL, rawNeeded);
+    }
+
+    function generateSlots(count) {
+      const container = document.getElementById('slots-container');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= count; i++) {
+        subjectsState[i] = {
+          name: '',
+          i1: 0,
+          a1: 0,
+          i2: 0,
+          a2: 0,
+          internal: 0,
+          targetScore: 91,
+          gradeName: 'O Grade'
+        };
+
+        const slot = document.createElement('div');
+        slot.className = 'subject-slot';
+        slot.id = `subject-slot-${i}`;
+        slot.innerHTML = `
+          <div class="slot-header">
+            <div class="slot-title" id="slot-heading-${i}">📚 Subject ${i}</div>
+          </div>
+
+          <div class="subj-name-wrap">
+            <label class="subj-label">Subject Name <span class="req-star">*</span></label>
+            <input 
+              type="text" 
+              class="subj-name-input" 
+              id="subj-title-${i}" 
+              placeholder="e.g. Machine Learning, Deep Learning, OS" 
+              oninput="updateSlotHeader(${i})" 
+              required 
+            />
+          </div>
+
+          <div class="grid-inputs">
+            <div class="input-group">
+              <label>Internal 1</label>
+              <div class="input-wrapper">
+                <input type="number" id="i1-${i}" min="0" max="50" placeholder="0" oninput="limitValue(this, 50, ${i})" />
+                <span>/ 50</span>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Assignment 1</label>
+              <div class="input-wrapper">
+                <input type="number" id="a1-${i}" min="0" max="40" placeholder="0" oninput="limitValue(this, 40, ${i})" />
+                <span>/ 40</span>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Internal 2</label>
+              <div class="input-wrapper">
+                <input type="number" id="i2-${i}" min="0" max="50" placeholder="0" oninput="limitValue(this, 50, ${i})" />
+                <span>/ 50</span>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Assignment 2</label>
+              <div class="input-wrapper">
+                <input type="number" id="a2-${i}" min="0" max="40" placeholder="0" oninput="limitValue(this, 40, ${i})" />
+                <span>/ 40</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="slot-internal-banner">
+            <div class="banner-label">Your Scaled Internal Mark</div>
+            <div class="banner-score" id="internal-score-banner-${i}">0 / 40</div>
+          </div>
+
+          <div class="prediction-spotlight">
+            <div class="pred-headline">Predicted Semester Exam Score</div>
+            <div class="pred-highlight-number" id="spotlight-mark-${i}">--</div>
+
+            <div class="conversion-pill-container" id="spotlight-pills-${i}">
+              <div class="conversion-pill">Converted (60): <strong id="sem-60-${i}">--</strong></div>
+              <div class="conversion-pill">Total Overall (100): <strong id="total-100-${i}">--</strong></div>
+            </div>
+
+            <div class="pred-subtext" id="spotlight-sub-${i}">Select target grade below</div>
+
+            <div class="chips-group">
+              <button class="chip active" onclick="selectSlotGrade(${i}, 'O Grade', 91, this)">O (91-100)</button>
+              <button class="chip" onclick="selectSlotGrade(${i}, 'A+ Grade', 81, this)">A+ (81-90)</button>
+              <button class="chip" onclick="selectSlotGrade(${i}, 'A Grade', 71, this)">A (71-80)</button>
+              <button class="chip" onclick="selectSlotGrade(${i}, 'B+ Grade', 61, this)">B+ (61-70)</button>
+              <button class="chip" onclick="selectSlotGrade(${i}, 'B Grade', 56, this)">B (56-60)</button>
+              <button class="chip" onclick="selectSlotGrade(${i}, 'C Grade', 51, this)">C (51-55)</button>
+            </div>
+          </div>
+
+          <div class="slot-result-box">
+            <table class="grade-table">
+              <tbody>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-o">O (91 - 100)</span></td>
+                  <td><span class="req-mark" id="m-o-${i}">--</span></td>
+                </tr>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-aplus">A+ (81 - 90)</span></td>
+                  <td><span class="req-mark" id="m-aplus-${i}">--</span></td>
+                </tr>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-a">A (71 - 80)</span></td>
+                  <td><span class="req-mark" id="m-a-${i}">--</span></td>
+                </tr>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-bplus">B+ (61 - 70)</span></td>
+                  <td><span class="req-mark" id="m-bplus-${i}">--</span></td>
+                </tr>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-b">B (56 - 60)</span></td>
+                  <td><span class="req-mark" id="m-b-${i}">--</span></td>
+                </tr>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-c">C (51 - 55) [Pass]</span></td>
+                  <td><span class="req-mark" id="m-c-${i}">--</span></td>
+                </tr>
+                <tr class="grade-row">
+                  <td><span class="grade-badge grade-ra">RA (&lt; 45 in Sem) [Fail]</span></td>
+                  <td><span class="req-mark" id="m-ra-${i}">&lt; 45</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+        container.appendChild(slot);
+        calcSubject(i);
+      }
+
+      container.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateSlotHeader(index) {
+      const inputEl = document.getElementById(`subj-title-${index}`);
+      const val = inputEl.value.trim();
+      subjectsState[index].name = val;
+      
+      if (val) {
+        inputEl.classList.remove('error');
+        document.getElementById(`slot-heading-${index}`).innerText = `📚 ${val}`;
+      } else {
+        document.getElementById(`slot-heading-${index}`).innerText = `📚 Subject ${index}`;
+      }
+    }
+
+    function selectSlotGrade(index, gradeName, target, el) {
+      const parentChips = el.parentElement;
+      parentChips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+
+      subjectsState[index].targetScore = target;
+      subjectsState[index].gradeName = gradeName;
+      updateSlotSpotlight(index);
+    }
+
+    function updateSlotSpotlight(index) {
+      const state = subjectsState[index];
+      const rawNeeded = Math.ceil((state.targetScore - state.internal) / 0.6);
+      const markEl = document.getElementById(`spotlight-mark-${index}`);
+      const sem60El = document.getElementById(`sem-60-${index}`);
+      const total100El = document.getElementById(`total-100-${index}`);
+      const subEl = document.getElementById(`spotlight-sub-${index}`);
+
+      if (rawNeeded > 100) {
+        markEl.innerText = 'Not Possible';
+        sem60El.innerText = 'N/A';
+        total100El.innerText = 'N/A';
+        subEl.innerText = `Internal mark (${state.internal}/40) is too low to achieve ${state.gradeName}`;
+        return;
+      }
+
+      const displayMark100 = Math.max(MIN_PASS_EXTERNAL, rawNeeded);
+      const converted60 = Math.round(displayMark100 * 0.6);
+      const totalOverall = state.internal + converted60;
+
+      markEl.innerText = `${displayMark100} / 100`;
+      sem60El.innerText = `${converted60} / 60`;
+      total100El.innerText = `${totalOverall} / 100`;
+
+      if (rawNeeded <= MIN_PASS_EXTERNAL) {
+        subEl.innerText = `Statutory passing mark 45 required in Sem Exam for ${state.gradeName}`;
+      } else {
+        subEl.innerText = `Score at least ${displayMark100} in Sem Exam to achieve ${state.gradeName}`;
+      }
+    }
+
+    function calcSubject(index) {
+      const i1 = Math.min(50, Math.max(0, Math.round(parseFloat(document.getElementById(`i1-${index}`).value) || 0)));
+      const a1 = Math.min(40, Math.max(0, Math.round(parseFloat(document.getElementById(`a1-${index}`).value) || 0)));
+      const i2 = Math.min(50, Math.max(0, Math.round(parseFloat(document.getElementById(`i2-${index}`).value) || 0)));
+      const a2 = Math.min(40, Math.max(0, Math.round(parseFloat(document.getElementById(`a2-${index}`).value) || 0)));
+
+      subjectsState[index].i1 = i1;
+      subjectsState[index].a1 = a1;
+      subjectsState[index].i2 = i2;
+      subjectsState[index].a2 = a2;
+
+      const scaledI1 = (i1 / 50) * 60;
+      const scaledI2 = (i2 / 50) * 60;
+      const totalRaw = scaledI1 + a1 + scaledI2 + a2;
+      
+      const currentInternal = Math.round((totalRaw / 200) * 40);
+      subjectsState[index].internal = currentInternal;
+      
+      document.getElementById(`internal-score-banner-${index}`).innerText = `${currentInternal} / 40`;
+
+      const reqO = getSemMarks(91, currentInternal);
+      const reqAPlus = getSemMarks(81, currentInternal);
+      const reqA = getSemMarks(71, currentInternal);
+      const reqBPlus = getSemMarks(61, currentInternal);
+      const reqB = getSemMarks(56, currentInternal);
+      const reqC = getSemMarks(51, currentInternal);
+
+      function formatRow(needed) {
+        if (needed > 100) return 'Not Possible';
+        const converted = Math.round(needed * 0.6);
+        const total = currentInternal + converted;
+        return `${needed} / 100 (${converted}/60) ➔ Total: ${total}`;
+      }
+
+      document.getElementById(`m-o-${index}`).innerText = formatRow(reqO);
+      document.getElementById(`m-aplus-${index}`).innerText = formatRow(reqAPlus);
+      document.getElementById(`m-a-${index}`).innerText = formatRow(reqA);
+      document.getElementById(`m-bplus-${index}`).innerText = formatRow(reqBPlus);
+      document.getElementById(`m-b-${index}`).innerText = formatRow(reqB);
+      document.getElementById(`m-c-${index}`).innerText = formatRow(reqC);
+
+      updateSlotSpotlight(index);
+    }
+
+    function generateVectorPDF() {
+      // Validate that all subject names are entered
+      for (let i = 1; i <= selectedCount; i++) {
+        const inputEl = document.getElementById(`subj-title-${i}`);
+        const nameVal = inputEl.value.trim();
+        if (!nameVal) {
+          inputEl.classList.add('error');
+          inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inputEl.focus();
+          alert(`Please enter the subject name for Subject ${i}`);
+          return;
+        }
+      }
+
+      const btn = document.getElementById('pdf-export-btn');
+      btn.innerText = "⏳ Generating Document...";
+      btn.disabled = true;
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+        const studentName = document.getElementById('disp-name').innerText;
+        const studentReg = document.getElementById('disp-regno').innerText;
+        const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.setTextColor(15, 23, 42);
+        doc.text("check my internal mark • Student Score Analysis & Target Report", 14, 14);
+
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text("Department of Artificial Intelligence & Data Science / GCT", 14, 19.5);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Report Date: ${currentDate}`, doc.internal.pageSize.width - 14, 14, { align: 'right' });
+
+        doc.setDrawColor(2, 132, 199);
+        doc.setLineWidth(0.6);
+        doc.line(14, 22, doc.internal.pageSize.width - 14, 22);
+
+        let totalInternalSum = 0;
+        const breakdownData = [];
+        const matrixData = [];
+
+        for (let i = 1; i <= selectedCount; i++) {
+          const sub = subjectsState[i];
+          totalInternalSum += sub.internal;
+
+          breakdownData.push([
+            sub.name,
+            `${sub.i1} / 50`,
+            `${sub.a1} / 40`,
+            `${sub.i2} / 50`,
+            `${sub.a2} / 40`,
+            `${sub.internal} / 40`
+          ]);
+
+          const cellVal = (target) => {
+            const needed = getSemMarks(target, sub.internal);
+            if (needed > 100) return 'Not Possible';
+            const c60 = Math.round(needed * 0.6);
+            return `${needed} (${c60}/60)`;
+          };
+
+          matrixData.push([
+            sub.name,
+            `${sub.internal} / 40`,
+            cellVal(91),
+            cellVal(81),
+            cellVal(71),
+            cellVal(61),
+            cellVal(56),
+            cellVal(51),
+            '< 45 (Fail)'
+          ]);
+        }
+
+        const avgInternal = (totalInternalSum / selectedCount).toFixed(1);
+
+        doc.autoTable({
+          startY: 25,
+          theme: 'grid',
+          body: [
+            [
+              `Student Name: ${studentName}`,
+              `Register No: ${studentReg}`,
+              `Total Subjects: ${selectedCount}`,
+              `Average Internal: ${avgInternal} / 40`
+            ]
+          ],
+          styles: {
+            fillColor: [248, 250, 252],
+            textColor: [15, 23, 42],
+            fontSize: 9,
+            fontStyle: 'bold',
+            cellPadding: 2.5,
+            lineColor: [203, 213, 225],
+            lineWidth: 0.25
+          }
+        });
+
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text("1. Continuous Internal Assessment (CIA) Input Breakdown", 14, doc.lastAutoTable.finalY + 6);
+
+        doc.autoTable({
+          startY: doc.lastAutoTable.finalY + 8,
+          head: [['Subject Name', 'Internal 1 (50)', 'Assignment 1 (40)', 'Internal 2 (50)', 'Assignment 2 (40)', 'Scaled Internal (40)']],
+          body: breakdownData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [30, 41, 59],
+            textColor: [255, 255, 255],
+            fontSize: 8,
+            fontStyle: 'bold',
+            halign: 'center'
+          },
+          columnStyles: {
+            0: { halign: 'left', fontStyle: 'bold' },
+            5: { fillColor: [224, 242, 254], fontStyle: 'bold', textColor: [2, 132, 199] }
+          },
+          styles: {
+            halign: 'center',
+            fontSize: 8,
+            cellPadding: 2,
+            lineColor: [226, 232, 240],
+            lineWidth: 0.2
+          }
+        });
+
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text("2. Required Semester Exam Score (Out of 100) for Target Letter Grades", 14, doc.lastAutoTable.finalY + 6);
+
+        doc.autoTable({
+          startY: doc.lastAutoTable.finalY + 8,
+          head: [['Subject Name', 'Internal (40)', 'O (91-100)', 'A+ (81-90)', 'A (71-80)', 'B+ (61-70)', 'B (56-60)', 'C (51-55)', 'RA (Fail)']],
+          body: matrixData,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [15, 23, 42],
+            textColor: [255, 255, 255],
+            fontSize: 8,
+            fontStyle: 'bold',
+            halign: 'center'
+          },
+          columnStyles: {
+            0: { halign: 'left', fontStyle: 'bold' },
+            1: { fillColor: [241, 245, 249], fontStyle: 'bold', textColor: [2, 132, 199] },
+            8: { textColor: [220, 38, 38], fontStyle: 'bold' }
+          },
+          styles: {
+            halign: 'center',
+            fontSize: 8,
+            cellPadding: 2,
+            lineColor: [226, 232, 240],
+            lineWidth: 0.2
+          }
+        });
+
+        const rulesY = doc.lastAutoTable.finalY + 5;
+        doc.autoTable({
+          startY: rulesY,
+          theme: 'plain',
+          body: [
+            [
+              "Mandatory Criteria: Minimum semester exam written score to pass is strictly 45 / 100. Scoring < 45 in external results in RA (Arrear).\nCalculation Formula: Converted External = Sem Written (100) × 0.6. Total Score (100) = Scaled Internal (40) + Converted External (60)."
+            ]
+          ],
+          styles: {
+            fillColor: [239, 246, 255],
+            textColor: [30, 64, 175],
+            fontSize: 7.5,
+            cellPadding: 2.5,
+            lineColor: [191, 219, 254],
+            lineWidth: 0.2
+          }
+        });
+
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(148, 163, 184);
+        doc.text("Generated securely via check my internal mark Analytical Suite", 14, doc.internal.pageSize.height - 6);
+        doc.text("Designed & Developed by Jayendhraa A & Balaji G (B.Tech AI&DS / GCT)", doc.internal.pageSize.width - 14, doc.internal.pageSize.height - 6, { align: 'right' });
+
+        doc.save(`${studentReg || 'Student'}_Semester_Score_Analysis.pdf`);
+
+        btn.innerText = "📥 Download Detailed Student Report (PDF)";
+        btn.disabled = false;
+      } catch (err) {
+        console.error("Vector PDF Error:", err);
+        window.print();
+        btn.innerText = "📥 Download Detailed Student Report (PDF)";
+        btn.disabled = false;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      runThunderLoading("Initializing Assets...", () => {
+        document.getElementById('app-container').classList.add('ready');
+      });
+    });
+  </script>
+</body>
+</html>
